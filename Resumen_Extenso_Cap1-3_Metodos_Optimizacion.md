@@ -574,3 +574,40 @@ El análisis de costo muestra que (AAᵀ)⁻¹ se calcula **una sola vez** al in
 - **Capítulo 2** desarrolla la optimización clásica irrestricta y diferenciable: el **Gradiente** (barato por iteración, O(n), pero convergencia lineal fuertemente condicionada por κ(Q)); **Newton** (caro por iteración, O(n³), pero convergencia cuadrática, requiriendo convexidad/Hessiano definido positivo y buen punto de partida); y **BFGS/Quasi-Newton** (O(n²) por iteración, convergencia superlineal) como el mejor compromiso práctico. El hilo conductor es siempre el balance **iteraciones × costo por iteración**.
 
 - **Capítulo 3** da el salto al régimen "moderno" de gran escala (Big Data, Machine Learning, Compressed Sensing), donde n puede ser de cientos de miles o millones, volviendo inviables incluso los métodos O(n²)/O(n³). Se privilegian métodos de primer orden con **paso fijo, muy baratos por iteración (O(n))**, aceptando peores tasas de convergencia (O(1/ε) o incluso O(1/ε²) en el caso no diferenciable) que se compensan parcialmente con **aceleración** (Nesterov, FISTA: O(1/√ε)). El capítulo extiende además el marco teórico a funciones **no diferenciables** (subgradientes, regularización L1/LASSO para inducir dispersión) y a problemas **con restricciones** (métodos proyectados, Frank-Wolfe), sentando las bases para los Algoritmos de Punto Interior y los métodos de gran escala/descomposición que se tratan en capítulos posteriores del apunte.
+
+---
+
+## Tablas comparativas de todos los métodos vistos
+
+### Tabla 1 — Capítulo 2: Métodos clásicos (problemas irrestrictos)
+
+| Método | Dirección d_k | Oráculo | Costo/iteración | Convergencia | N° iteraciones (orden) | Requisito clave |
+|---|---|---|---|---|---|---|
+| **Gradiente (Cauchy)** | −∇f(x_k) | 1er orden | O(n) | Lineal (depende de κ(Q)=μ_max/μ_min) | O(log 1/ε) | Ninguno especial; lento si mal condicionado |
+| **Newton** | −[∇²f(x_k)]⁻¹∇f(x_k) | 2do orden | O(n³) | Cuadrática | O(log log 1/ε) | ∇²f(x_k) def. positiva + partir cerca de x* |
+| **BFGS (Quasi-Newton)** | −H_k∇f(x_k), H_k actualizado por secante | 1er orden | O(n²) | Superlineal | Entre Gradiente y Newton | Condición de curvatura sₖᵀyₖ>0 (la da Wolfe) |
+| **L-BFGS** | ídem BFGS, con memoria limitada | 1er orden | O(n) memoria, ~O(mn) tiempo | Superlineal | similar a BFGS | Igual que BFGS, para n muy grande |
+| **"Newtoncito"** | −[H̃_k]⁻¹∇f(x_k), H̃_k = ∇²f(x_k) corregido a diagonal-dominante | 2do orden | O(n³) | Cuadrática cerca de x* (como Newton) | similar a Newton | Sirve incluso si f no es convexa |
+| **Descenso por Coordenadas** | −(∂f/∂x_j₀)·e_j₀ (una coordenada al azar) | 1er orden parcial | O(1) por coordenada | Lineal, pero más iteraciones totales | mayor que Gradiente completo | Útil cuando ni siquiera calcular ∇f completo es viable |
+
+### Tabla 2 — Capítulo 3: Métodos de primer orden (gran escala / no diferenciables / restringidos)
+
+| Método | Tipo de problema | Paso | Costo/iteración | Convergencia | N° iteraciones (orden) |
+|---|---|---|---|---|---|
+| **Método simple (paso fijo)** | f diferenciable, ∇f L-Lipschitz | 1/L, fijo | O(n) | Sublineal | O(1/ε) |
+| **Acelerado (Nesterov)** | ídem + fuertemente convexo (opcional) | 1/L, dos sucesiones (x_k, z_k) | O(n) | Sublineal (lineal si μ-fuerte convexa) | O(1/√ε) (o O(log 1/ε) si fuerte convexa) |
+| **Subgradiente** | f no diferenciable, L-Lipschitz | decreciente, λ_k=R/(L√(k+1)) | O(n) | Sublineal | O(1/ε²) |
+| **FISTA** | min g(x)+h(x), g no diferenciable, ∇h L-Lipschitz | 1/L + momento tipo Nesterov | O(n) + prox (soft-thresholding) | Sublineal | O(1/√ε) |
+| **Método Proyectado** | cualquiera de los anteriores + x∈D | igual al método base | + costo de Π_D(·) | igual al método base | igual al método base |
+| **Frank-Wolfe** | f diferenciable, x∈poliedro (Ax≤b) | α_k=2/(k+2) | resolver una LP lineal (barato si D es simple, ej. bola L1) | Sublineal | O(1/ε) |
+
+**Nota sobre el trade-off central:** a medida que se avanza en la Tabla 1 (Gradiente → Newton) se gana velocidad de convergencia a costa de un oráculo y costo por iteración más caros; la Tabla 2 muestra el mismo fenómeno pero en el sentido inverso — se sacrifica tasa de convergencia (O(1/ε) o incluso O(1/ε²)) para mantener un costo por iteración de solo O(n), indispensable cuando n es demasiado grande para pagar O(n²) o O(n³).
+
+### Tabla 3 — Procedimientos de Linesearch (selección del paso λ_k)
+
+| Procedimiento | Oráculo | Supuesto sobre h(λ)=f(x_k+λd_k) | Idea central |
+|---|---|---|---|
+| **Sección Áurea** | orden 0 | unimodal | descarta intervalos usando la razón áurea φ≈1,618 |
+| **Bisección** | orden 1 (signo de h') | unimodal | reduce el intervalo a la mitad según el signo de h'(punto medio) |
+| **Interpolación cuadrática** | orden 1 | localmente suave | ajusta una parábola con 2 puntos + 1 derivada y minimiza analíticamente |
+| **Wolfe-Armijo (backtracking)** | orden 1 | ninguno estricto | acepta el primer λ que cumpla descenso suficiente + curvatura — no exige resolver el linesearch exactamente |
